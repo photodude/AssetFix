@@ -3,47 +3,58 @@
  * A JApplicationWeb application built on the Joomla Platform.
  *
  * To run this place it in the root of your Joomla CMS installation.
- * This application is buil
+ * This application is currently built to run as a stand alone application.
  *
  * @package    Joomla.AssetFix
- * @copyright  Copyright (C) 2005 - 2012 Open Source Matters, Inc. All rights reserved.
+ * @copyright  Copyright (C) 2017 Walt Sorensen
  * @license    GNU General Public License version 2 or later; see LICENSE
  */
 
-//ini_set('display_errors','1');
-error_reporting(-1);
-ini_set('display_errors', 'On');
+// Set flag that this is a parent file. We are a valid Joomla entry point.
+const _JEXEC = 1;
 
-// Set flag that this is a parent file.
-// We are a valid Joomla entry point.
-define('_JEXEC', 1);
+// Load system defines
+if (file_exists(dirname(__DIR__) . '/defines.php'))
+{
+	require_once dirname(__DIR__) . '/defines.php';
+}
 
-// Setup the base path related constants.
-define('JPATH_BASE', dirname(__FILE__));
-define('JPATH_SITE', JPATH_BASE);
-define('JPATH_CONFIGURATION',JPATH_BASE);
-define('JPATH_CACHE',JPATH_BASE . '/cache');
+if ( !defined('_JDEFINES'))
+{
+	define('JPATH_BASE', dirname(__DIR__));
+	require_once JPATH_BASE . '/includes/defines.php';
+}
 
-// Bootstrap the application.
-require JPATH_BASE . '/libraries/import.php';
+// Get the framework
+require_once JPATH_LIBRARIES . '/import.legacy.php';
+
+// Bootstrap the CMS libraries.
+require_once JPATH_LIBRARIES . '/cms.php';
+
+// Load the configuration
+require_once JPATH_CONFIGURATION . '/configuration.php';
+
+// System configuration.
+//$config = new JConfig;
+//define('JDEBUG', $config->debug);
+
+// Configure error reporting to maximum for CLI output.
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Import the JApplicationWeb class from the platform.
-// IS_MAC is not defined in the CMS 3 version of the platform.
-if (!defined('IS_MAC'))
-{
-	define('JPATH_LIBRARIES', JPATH_PLATFORM);
-	require JPATH_BASE . '/libraries/import.legacy.php';
-	require JPATH_BASE . '/libraries/cms.php';
+// Setup the autoloaders.
+JLoader::setup();
+JLoader::import('joomla.application.web');
+JLoader::import('cms.helper.tags');
+JLoader::import('cms.table.corecontent');
+JLoader::import('joomla.observer.mapper');
+JLoader::import('joomla.database.database');
+// Categories is in legacy for CMS 3 so we have to check there.
+JLoader::registerPrefix('J', JPATH_PLATFORM . '/legacy');
+JLoader::Register('J', JPATH_PLATFORM . '/cms');
 
-	// Import the JApplicationWeb class from the platform.
-	JLoader::import('joomla.application.web');
-	JLoader::import('cms.helper.tags');
-	JLoader::import('cms.table.corecontent');
-	JLoader::import('joomla.observer.mapper');
-	// Categories is in legacy for CMS 3 so we have to check there.
-	JLoader::registerPrefix('J', JPATH_PLATFORM . '/legacy');
-	JLoader::Register('J', JPATH_PLATFORM . '/cms');
-}
+
 /**
  * This class checks some common situations that occur when the asset table is corrupted.
  */
@@ -62,12 +73,22 @@ class Assetfix extends JApplicationWeb
 	{
 		// Call the parent __construct method so it bootstraps the application class.
 		parent::__construct();
-		require_once JPATH_CONFIGURATION.'/configuration.php';
-
-		jimport('joomla.database.database');
 
 		// System configuration.
 		$config = JFactory::getConfig();
+
+		// Load Library language
+		$jlang = JFactory::getLanguage();
+		$jlang->load('lib_joomla', JPATH_SITE, 'en-GB', true);
+		$jlang->load('lib_joomla', JPATH_SITE, null, true);
+
+		// Add a logger
+		JLog::addLogger(
+			array(
+				// Set the name of the log file.
+				'text_file' => 'Assetfix.php',
+			), JLog::DEBUG
+		);
 
 		/**
 		 * Note, this will throw an exception if there is an error
