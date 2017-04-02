@@ -27,7 +27,6 @@ define('JPATH_CACHE',JPATH_BASE . '/cache');
 // Bootstrap the application.
 require JPATH_BASE . '/libraries/import.php';
 
-
 // Import the JApplicationWeb class from the platform.
 // IS_MAC is not defined in the CMS 3 version of the platform.
 if (!defined('IS_MAC'))
@@ -48,10 +47,8 @@ if (!defined('IS_MAC'))
 /**
  * This class checks some common situations that occur when the asset table is corrupted.
  */
-// Instantiate the application.
 class Assetfix extends JApplicationWeb
 {
-
 	/**
 	 * Overrides the parent doExecute method to run the web application.
 	 *
@@ -61,7 +58,6 @@ class Assetfix extends JApplicationWeb
 	 *
 	 * @since   11.3
 	 */
-
 	public function __construct()
 	{
 		// Call the parent __construct method so it bootstraps the application class.
@@ -73,8 +69,10 @@ class Assetfix extends JApplicationWeb
 		// System configuration.
 		$config = JFactory::getConfig();
 
-		// Note, this will throw an exception if there is an error
-		// Creating the database connection.
+		/**
+		 * Note, this will throw an exception if there is an error
+		 * Creating the database connection.
+		 */
 		$this->dbo = JDatabase::getInstance(
 			array(
 				'driver' => $config->get('dbtype'),
@@ -85,7 +83,7 @@ class Assetfix extends JApplicationWeb
 				'prefix' => $config->get('dbprefix'),
 			)
 		);
-
+		//JFactory::getApplication('site')->initialise();
 	}
 
 	protected function doExecute()
@@ -97,7 +95,6 @@ class Assetfix extends JApplicationWeb
 
 		$this->appendBody('<html>')
 			->appendBody('<head>')
-
 			->appendBody('</head>')
 			->appendBody('<body style="font-family:verdana; margin-left: 30px; width: 500px;">');
 
@@ -106,12 +103,11 @@ class Assetfix extends JApplicationWeb
 			<p>It attempts to fix some of the reported issues in asset tables, but is not guaranteed to fix everything</p>'
 		);
 
-			$this->_db = JFactory::getDBO();
-
+			$this->db = JFactory::getDbo();
 			$contenttable =  JTable::getInstance('Content');
 			$asset = JTable::getInstance('Asset');
-
 			$asset->loadByName('root.1');
+
 			if ($asset)
 			{
 				$rootId = (int) $asset->id;
@@ -133,14 +129,15 @@ class Assetfix extends JApplicationWeb
 				// Should the row just be inserted here? 
 				$this->appendBody('<p>There is no valid root. Please manually create a root asset and rerun.</p>');
 			}
+
 			if ($rootId)
 			{
 				// Now let's make sure that the components  make sense
-				$query = $this->_db->getQuery(true);
+				$query = $this->db->getQuery(true);
 				$query->select('extension_id, name');
-				$query->from($this->_db->quoteName('#__extensions'));
-				$query->where($this->_db->quoteName('type') . ' = ' . $this->_db->quote('component'));
-				$this->_db->setQuery($query);
+				$query->from($this->db->quoteName('#__extensions'));
+				$query->where($this->db->quoteName('type') . ' = ' . $this->db->quote('component'));
+				$this->db->setQuery($query);
 				$components = $this->dbo->loadObjectList();
 
 				foreach ($components as $component)
@@ -164,18 +161,16 @@ class Assetfix extends JApplicationWeb
 
 				// Although we have rebuilt it may not have fully worked. Let's do some extra checks.
 				$asset = JTable::getInstance('Asset');
-				
 				$assetTree = $asset->getTree(1);
 
 				// Get all the categories as objects
-				$queryc = $this->_db->getQuery(true);
+				$queryc = $this->db->getQuery(true);
 				$queryc->select('id, asset_id, parent_id');
 				$queryc->from('#__categories');
-				$this->_db->setQuery($queryc);
+				$this->db->setQuery($queryc);
 				$categories = $this->dbo->loadObjectList();
 
 				// Create an array of just level 1 assets that look like the are extensons. 
-
 				$extensionAssets = array();
 
 				foreach ($assetTree as $aid => $assetData)
@@ -203,6 +198,7 @@ class Assetfix extends JApplicationWeb
 						{
 							$catFixCount = 0;
 							$fixedCats = array();
+
 							// Just assume that they are top level categories.
 							// We are also goingto fix parent_id of 1 since some people in the forums did this to temporarily
 							// fix a problem and also categories should never have a parent_id of 1.
@@ -227,14 +223,14 @@ class Assetfix extends JApplicationWeb
 				}
 
 				// Rebuild again as a final check to clear up any newly created inconsistencies.
-                JTable::getInstance('Category')->rebuild();
+				JTable::getInstance('Category')->rebuild();
 				$this->appendBody('<p>Categories were successfully finished.</p>');
 
 				// Now we will start work on the articles
-				$query = $this->_db->getQuery(true);
+				$query = $this->db->getQuery(true);
 				$query->select('id, asset_id');
 				$query->from('#__content');
-				$this->_db->setQuery($query);
+				$this->db->setQuery($query);
 				$articles = $this->dbo->loadObjectList();
 
 				foreach ($articles as $article)
@@ -246,12 +242,12 @@ class Assetfix extends JApplicationWeb
 					if ($article->id > 0)
 					{
 						$asset->loadByName('com_content.article.' . (int) $article->id);
-						$query = $this->_db->getQuery(true);
-						$query->update($this->_db->quoteName('#__content'));
-						$query->set($this->_db->quoteName('asset_id') . ' = ' . (int) $asset->id);
+						$query = $this->db->getQuery(true);
+						$query->update($this->db->quoteName('#__content'));
+						$query->set($this->db->quoteName('asset_id') . ' = ' . (int) $asset->id);
 						$query->where('id = ' . (int) $article->id);
 						$this->dbo->setQuery($query);
-						$this->dbo->query();
+						$this->dbo->execute();
 					}
 
 					//  JTableAssets can clean an empty value for asset_id but not a 0 value. 
@@ -264,10 +260,9 @@ class Assetfix extends JApplicationWeb
 				}
 
 				$this->appendBody('<p>Article assets successfully finished.</p>');
-
-			$this->appendBody('</li>');
-			$this->appendBody('</li>
-			</ul>');
+				$this->appendBody('</li>');
+				$this->appendBody('</li>
+				</ul>');
 			}
 
 		// Finish up the HTML response.
@@ -278,15 +273,15 @@ class Assetfix extends JApplicationWeb
 	protected function fixRoot($rootId)
 	{
 		// Set up the proper nested values for root
-		$queryr = $this->_db->getQuery(true);
-		$queryr->update($this->_db->quoteName('#__assets'));
-		$queryr->set($this->_db->quoteName('parent_id') . ' = 0 ')
-			->set($this->_db->quoteName('level') . ' =  0 ' )
-			->set($this->_db->quoteName('lft') . ' = 1 ')
-			->set($this->_db->quoteName('name') . ' = ' . $this->_db->quote('root.' . (int) $rootId));
+		$queryr = $this->db->getQuery(true);
+		$queryr->update($this->db->quoteName('#__assets'));
+		$queryr->set($this->db->quoteName('parent_id') . ' = 0 ')
+			->set($this->db->quoteName('level') . ' =  0 ' )
+			->set($this->db->quoteName('lft') . ' = 1 ')
+			->set($this->db->quoteName('name') . ' = ' . $this->db->quote('root.' . (int) $rootId));
 		$queryr->where('id = ' . (int) $rootId);
 		$this->dbo->setQuery($queryr);
-		$this->dbo->query();
+		$this->dbo->execute();
 
 		return;
 	}
@@ -304,13 +299,13 @@ class Assetfix extends JApplicationWeb
 	protected function fixExtensionAsset($asset, $rootId = 1)
 	{
 		// Set up the proper nested values for an extension
-		$querye = $this->_db->getQuery(true);
-		$querye->update($this->_db->quoteName('#__assets'));
-		$querye->set($this->_db->quoteName('parent_id') . ' =  ' . $rootId )
-			->set($this->_db->quoteName('level') . ' = 1 ' );
-		$querye->where('name = ' . $this->_db->quote($asset->name));
+		$querye = $this->db->getQuery(true);
+		$querye->update($this->db->quoteName('#__assets'));
+		$querye->set($this->db->quoteName('parent_id') . ' =  ' . $rootId )
+			->set($this->db->quoteName('level') . ' = 1 ' );
+		$querye->where('name = ' . $this->db->quote($asset->name));
 		$this->dbo->setQuery($querye);
-		$this->dbo->query();
+		$this->dbo->execute();
 
 		return;
 	}
@@ -340,10 +335,10 @@ class Assetfix extends JApplicationWeb
 		// Test for a unique record with lft = 0
 		$query = $this->dbo->getQuery(true);
 		$query->select('id')
-			->from($this->_db->quoteName('#__assets'))
-			->where($this->_db->quote('lft') . ' = 0');
+			->from($this->db->quoteName('#__assets'))
+			->where($this->db->quote('lft') . ' = 0');
 
-		$result = $this->_db->setQuery($query)->loadColumn();
+		$result = $this->db->setQuery($query)->loadColumn();
 
 		if (count($result) == 1)
 		{
@@ -351,12 +346,12 @@ class Assetfix extends JApplicationWeb
 		}
 
 		// Test for a unique record alias = root
-		$query = $this->_db->getQuery(true);
-		$query->select($this->_db->quoteName('id'))
-			->from($this->_db->quoteName('#__assets'))
-			->where('name LIKE ' . $this->_db->quote('root%'));
+		$query = $this->db->getQuery(true);
+		$query->select($this->db->quoteName('id'))
+			->from($this->db->quoteName('#__assets'))
+			->where('name LIKE ' . $this->db->quote('root%'));
 
-		$result = $this->_db->setQuery($query)->loadColumn();
+		$result = $this->db->setQuery($query)->loadColumn();
 
 		if (count($result) == 1)
 		{
@@ -364,7 +359,6 @@ class Assetfix extends JApplicationWeb
 		}
 
 		$e = new UnexpectedValueException(sprintf('%s::getRootId', get_class($this)));
-		//$this->setError($e);
 
 		return false;
 	}
