@@ -14,18 +14,19 @@
 const _JEXEC = 1;
 
 // Load system defines
-if (file_exists(dirname(__DIR__) . '/defines.php'))
+if (file_exists(__DIR__ . '/defines.php'))
 {
-	require_once dirname(__DIR__) . '/defines.php';
+	require_once __DIR__ . '/defines.php';
 }
 
-if ( !defined('_JDEFINES'))
+if (!defined('_JDEFINES'))
 {
-	define('JPATH_BASE', dirname(__DIR__));
+	define('JPATH_BASE', __DIR__);
 	require_once JPATH_BASE . '/includes/defines.php';
 }
 
 // Get the framework
+require_once JPATH_BASE . '/includes/framework.php';
 require_once JPATH_LIBRARIES . '/import.legacy.php';
 
 // Bootstrap the CMS libraries.
@@ -38,7 +39,7 @@ require_once JPATH_CONFIGURATION . '/configuration.php';
 //$config = new JConfig;
 //define('JDEBUG', $config->debug);
 
-// Configure error reporting to maximum for CLI output.
+// Configure error reporting to maximum for script output.
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -54,20 +55,19 @@ JLoader::import('joomla.database.database');
 JLoader::registerPrefix('J', JPATH_PLATFORM . '/legacy');
 JLoader::Register('J', JPATH_PLATFORM . '/cms');
 
-
 /**
  * This class checks some common situations that occur when the asset table is corrupted.
  */
 class Assetfix extends JApplicationWeb
 {
 	/**
-	 * Overrides the parent doExecute method to run the web application.
+	 * Overrides the parent __construct method to run the web application.
 	 *
-	 * This method should include your custom code that runs the application.
+	 * This method should includes our custom code that runs the application.
 	 *
 	 * @return  void
 	 *
-	 * @since   11.3
+	 * @since   1.0
 	 */
 	public function __construct()
 	{
@@ -104,9 +104,17 @@ class Assetfix extends JApplicationWeb
 				'prefix' => $config->get('dbprefix'),
 			)
 		);
-		//JFactory::getApplication('site')->initialise();
 	}
 
+	/**
+	 * Overrides the parent doExecute method to run the web application.
+	 *
+	 * This method should includes our custom code that runs the application.
+	 *
+	 * @return  void
+	 *
+	 * @since   1.0
+	 */
 	protected function doExecute()
 	{
 		// Initialise the body with the DOCTYPE.
@@ -384,4 +392,11 @@ class Assetfix extends JApplicationWeb
 		return false;
 	}
 }
-JApplicationWeb::getInstance('Assetfix')->execute();
+// Instantiate the application object
+$app = JApplicationWeb::getInstance('Assetfix');
+
+// The code assumes that JFactory::getApplication returns a valid reference. We must not disappoint it!
+JFactory::$application = $app;
+
+// Execute the application
+$app->execute();
