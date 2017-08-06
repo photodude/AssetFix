@@ -1,7 +1,7 @@
 AssetFix
 ========
 
-Application for fixing assets.
+Application for fixing assets. **Note: only works in J3.7.2+)
 
 Place the application in your joomla root and then browse to it.
 
